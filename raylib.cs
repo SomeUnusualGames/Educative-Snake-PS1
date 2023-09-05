@@ -120,4 +120,7 @@ public static unsafe class Raylib
 
     [DllImport("raylib", CallingConvention = CallingConvention.Cdecl)]
     public static extern void EndMode2D();
+
+    [DllImport("raylib", CallingConvention = CallingConvention.Cdecl)]
+    public static extern float GetFrameTime();
 }

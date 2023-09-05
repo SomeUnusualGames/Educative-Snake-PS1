@@ -115,7 +115,8 @@ class Equation {
           }
           "/" {
             $divs = [Equation]::getDivisibleNumbers($num[0])
-            $randDiv = Get-Random -Maximum ($divs.Count-1)
+            $maxValue = if ($divs.Count-1 -eq 0) { 1 } else { $divs.Count-1 }
+            $randDiv = Get-Random -Maximum $maxValue
             $num2[0] = $divs[$randDiv]
           }
           "-" {
