@@ -1,10 +1,8 @@
 using namespace System.Collections
-
 enum EquationType {
   Operator = 0
   Number
 }
-
 class Equation {
   static $precedence = @{ "+" = 0; "-" = 0; "x" = 1; "/" = 1 }
   [EquationType]$type
@@ -12,12 +10,19 @@ class Equation {
   [int]$result
   [int]$unknownIndex
   [ArrayList]$tokenList = @()
+  [ArrayList]$answers = @()
+  [ArrayList]$answersPosition = @()
+  [String]$eqStr
+  [Color]$eqColor
+  [Color]$answerColor
 
   Equation([EquationType]$eqType) {
     $this.type = $eqType
     $this.size = Get-Random -Minimum 2 -Maximum 5
     $this.tokenList = @()
     $this.unknownIndex = 0
+    $this.eqColor = New-Color 255 255 255 255
+    $this.answerColor = New-Color 0 0 0 255
   }
   
   static [String]getRandomOperator() {
@@ -133,5 +138,49 @@ class Equation {
     do {
       $this.unknownIndex = Get-Random -Minimum 1 -Maximum ($this.size+1)
     } while ($this.unknownIndex % 2 -ne $divUnknown)
+    for ($i = 0; $i -lt $this.tokenList.Count; $i++) {
+      $value = if ($this.tokenList[$i] -is [Array]) { $this.tokenList[$i][0].ToString() } else { $this.tokenList[$i] }
+      if ($i -ne $this.unknownIndex) {
+        $this.eqStr += $value
+      } else {
+        $this.eqStr += "_"
+      }
+    }
+    $this.eqStr += "=" + $this.result
+    # TODO: Do not set the correct answer as the first one,
+    # either randomize the x position of the answers
+    # or randomize the position of the correct answer in the array
+    # See: Sort-Object {Get-Random}
+    $this.answers += $this.tokenList[$this.unknownIndex][0]
+    if ($this.type -eq [EquationType]::Number) {
+      $this.answers += $this.answers[0] + (Get-Random -Minimum 1 -Maximum 3)
+      $this.answers += $this.answers[0] - (Get-Random -Minimum 1 -Maximum 3)
+      $randSign = if ((Get-Random -Maximum 10) -lt 5) { -1 } else { 1 }
+      $this.answers += $this.answers[0] + $randSign * (Get-Random -Minimum 4 -Maximum 8)
+    } else {
+      [String[]]$operators = @("+", "-", "x", "/")
+      for ($i = 0; $i -lt 4; $i++) {
+        if ($operators[$i] -ne $this.answers[0]) {
+          $this.answers += $operators[$i]
+        }
+      }
+    }
+    for ($i = 0; $i -lt 4; $i++) {
+      $x = ($i*350) + 100
+      $y = Get-Random -Minimum 130 -Maximum 600
+      $this.answersPosition += (New-Rectangle $x $y 40 40)
+    }
+  }
+
+  drawAnswers() {
+    for ($i = 0; $i -lt $this.answersPosition.Count; $i++) {
+      $rect = $this.answersPosition[$i]
+      [Raylib]::DrawRectangleRec($this.answersPosition[$i], $this.eqColor)
+      [Raylib]::DrawText($this.answers[$i], $rect.x+3, $rect.y, 40, $this.answerColor)
+    }
+  }
+
+  draw() {
+    [Raylib]::DrawText($this.eqStr, 450, 40, 80, $this.eqColor)
   }
 }
