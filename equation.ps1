@@ -9,6 +9,7 @@ class Equation {
   [int]$size
   [int]$result
   [int]$unknownIndex
+  [int]$selectedAnswer = -1
   [ArrayList]$tokenList = @()
   [ArrayList]$answers = @()
   [ArrayList]$answersPosition = @()
@@ -18,7 +19,7 @@ class Equation {
 
   Equation([EquationType]$eqType) {
     $this.type = $eqType
-    $this.size = Get-Random -Minimum 2 -Maximum 5
+    $this.size = 2
     $this.tokenList = @()
     $this.unknownIndex = 0
     $this.eqColor = New-Color 255 255 255 255
@@ -147,10 +148,6 @@ class Equation {
       }
     }
     $this.eqStr += "=" + $this.result
-    # TODO: Do not set the correct answer as the first one,
-    # either randomize the x position of the answers
-    # or randomize the position of the correct answer in the array
-    # See: Sort-Object {Get-Random}
     $this.answers += $this.tokenList[$this.unknownIndex][0]
     if ($this.type -eq [EquationType]::Number) {
       $this.answers += $this.answers[0] + (Get-Random -Minimum 1 -Maximum 3)
@@ -165,10 +162,24 @@ class Equation {
         }
       }
     }
+    $this.answers = $this.answers | Sort-Object {Get-Random}
     for ($i = 0; $i -lt 4; $i++) {
       $x = ($i*350) + 100
       $y = Get-Random -Minimum 130 -Maximum 600
       $this.answersPosition += (New-Rectangle $x $y 40 40)
+    }
+  }
+
+  checkCollision([float]$headX, [float]$headY) {
+    if ($this.selectedAnswer -ge 0) {
+      return
+    }
+    for ($i = 0; $i -lt 4; $i++) {
+      $col = collisionRectPoint $this.answersPosition[$i] $headX $headY
+      if ($col) {
+        $this.selectedAnswer = $i
+        break
+      }
     }
   }
 

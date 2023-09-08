@@ -35,8 +35,7 @@ class Snake {
     } elseif ([Raylib]::IsKeyPressed(83) -and $this.movement -ne [Movement]::North) {
       $this.movement = [Movement]::South
       $this.movTimer = 0.0
-    }
-    if ([Raylib]::IsKeyPressed(65) -and $this.movement -ne [Movement]::East) {
+    } elseif ([Raylib]::IsKeyPressed(65) -and $this.movement -ne [Movement]::East) {
       $this.movement = [Movement]::West
       $this.movTimer = 0.0
     } elseif ([Raylib]::IsKeyPressed(68) -and $this.movement -ne [Movement]::West) {
