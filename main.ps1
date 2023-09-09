@@ -70,6 +70,5 @@ while (-not [Raylib]::WindowShouldClose()) {
   }
   [Raylib]::EndDrawing()
 }
-[Raylib]::CloseAudioDevice()
 [Raylib]::CloseWindow()
 exit
