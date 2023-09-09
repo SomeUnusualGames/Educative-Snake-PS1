@@ -18,6 +18,16 @@ class Walls {
     $this.position += , (New-Rectangle $x $y $width $height)
   }
 
+  [boolean]checkCollision([Rectangle]$head) {
+    foreach ($currentWall in $this.position) {
+      $col = collisionRectPoint $currentWall ($head.x+10) ($head.y+10)
+      if ($col) {
+        return $true
+      }
+    }
+    return $false
+  }
+
   draw() {
     foreach ($wall in $this.position) {
       [Raylib]::DrawRectangleRec($wall, $this.color)

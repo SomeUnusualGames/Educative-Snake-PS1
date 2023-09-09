@@ -221,12 +221,12 @@ class Equation {
     }
   }
 
-  checkCollision([float]$headX, [float]$headY) {
+  checkCollision([Rectangle]$head) {
     if ($this.selectedAnswer -ge 0) {
       return
     }
     for ($i = 0; $i -lt 4; $i++) {
-      $col = collisionRectPoint $this.answersPosition[$i] $headX $headY
+      $col = collisionRectPoint $this.answersPosition[$i] ($head.x+10) ($head.y+10)
       if ($col) {
         $this.selectedAnswer = $i
         break

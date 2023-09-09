@@ -44,6 +44,16 @@ class Snake {
     }
   }
 
+  [boolean]checkCollisionBody() {
+    for ($i = 1; $i -lt $this.body.Count; $i++) {
+      $col = collisionRectPoint $this.body[$i] ($this.body[0].x+10) ($this.body[0].y+10)
+      if ($col) {
+        return $true
+      }
+    }
+    return $false
+  }
+
   [void]updateMovement() {
     $this.movTimer -= [Raylib]::GetFrameTime()
     if ($this.movTimer -lt 0) {
