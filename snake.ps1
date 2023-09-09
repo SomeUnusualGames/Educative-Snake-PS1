@@ -17,14 +17,14 @@ class Snake {
 
   Snake([float]$initialX, [float]$initialY, [int]$length, [float]$timer) {
     $this.length = $length
+    $this.maxTimer = $timer
+    $this.movTimer = $this.maxTimer
     for ($i = 0; $i -lt $this.length; $i++) {
       $x = $initialX - ($this.size * $i)
       $this.body += (New-Rectangle $x $initialY $this.size $this.size)
     }
     $this.color = New-Color 0 255 0 255
     $this.movement = [Movement]::East
-    $this.maxTimer = $timer
-    $this.movTimer = $this.maxTimer
   }
 
   [void]checkMovement() {

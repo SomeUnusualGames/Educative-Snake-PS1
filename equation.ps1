@@ -3,27 +3,43 @@ enum EquationType {
   Operator = 0
   Number
 }
+
+enum EquationState {
+  Unanswered = 0
+  Correct
+  Incorrect
+}
+
 class Equation {
   static $precedence = @{ "+" = 0; "-" = 0; "x" = 1; "/" = 1 }
   [EquationType]$type
+  [EquationState]$state = [EquationState]::Unanswered
   [int]$size
   [int]$result
   [int]$unknownIndex
   [int]$selectedAnswer = -1
+  [int]$correctAnswers = 0
   [ArrayList]$tokenList = @()
   [ArrayList]$answers = @()
   [ArrayList]$answersPosition = @()
   [String]$eqStr
   [Color]$eqColor
+  [Color]$correctColor
+  [Color]$incorrectColor
   [Color]$answerColor
+  [float]$resetTimer = 0.0
 
-  Equation([EquationType]$eqType) {
+  Equation([EquationType]$eqType, [int]$correctAnswers, [int]$size) {
     $this.type = $eqType
-    $this.size = 2
+    $this.size = $size
     $this.tokenList = @()
     $this.unknownIndex = 0
+    $this.selectedAnswer = -1
+    $this.correctAnswers = $correctAnswers
     $this.eqColor = New-Color 255 255 255 255
     $this.answerColor = New-Color 0 0 0 255
+    $this.correctColor = New-Color 0 255 0 255
+    $this.incorrectColor = New-Color 255 0 0 255
   }
   
   static [String]getRandomOperator() {
@@ -74,6 +90,7 @@ class Equation {
         $this.tokenList += [Equation]::getRandomOperator()
       }
     }
+    <#
     # https://en.wikipedia.org/wiki/Shunting_yard_algorithm
     # Write the equation a + b * c in the Reverse Polish notation: a b c * -
     [ArrayList]$output = @()
@@ -100,10 +117,35 @@ class Equation {
     }
     # Push the rest of the stack to the output
     $output += $operatorStack
+    #>
 
     # Division: remainder always zero.
     # Multiplication: no huge numbers.
     # Substraction: avoid negative numbers.
+    for ($i = 2; $i -lt $this.tokenList.Count; $i += 2) {
+      $num2 = $this.tokenList[$i]
+      $op = $this.tokenList[$i-1]
+      $num = $this.tokenList[$i-2]
+      switch ($op) {
+        "x" {
+          $num2[0] = Get-Random -Minimum 1 -Maximum 11
+          break
+        }
+        "/" {
+          $divs = [Equation]::getDivisibleNumbers($num[0])
+          $maxValue = if ($divs.Count-1 -eq 0) { 1 } else { $divs.Count-1 }
+          $randDiv = Get-Random -Maximum $maxValue
+          $num2[0] = $divs[$randDiv]
+          break
+        }
+        "-" {
+          $maxRand = [int]($num[0]/2 + 1) 
+          $num2[0] = Get-Random -Minimum 1 -Maximum $maxRand
+          break
+        }
+      }
+    }
+    <#
     [ArrayList]$res = @()
     for ($i = 0; $i -lt $output.Count; $i++) {
       $token = $output[$i]
@@ -124,10 +166,15 @@ class Equation {
             $maxValue = if ($divs.Count-1 -eq 0) { 1 } else { $divs.Count-1 }
             $randDiv = Get-Random -Maximum $maxValue
             $num2[0] = $divs[$randDiv]
+            break
           }
           "-" {
             $maxRand = [int]($num[0]/2 + 1) 
-            $num2[0] = Get-Random -Maximum $maxRand
+            $num2[0] = Get-Random -Minimum 1 -Maximum $maxRand
+            if ($num2[1] -ne -1) {
+              $this.tokenList[$num2[1]][0] = $num2[0]
+            }
+            break
           }
         }
         $opResult = [Equation]::performOperation($num[0], $num2[0], $token)
@@ -135,18 +182,22 @@ class Equation {
       }
     }
     $this.result = $res[0][0]
+    #>
     $divUnknown = if ($this.type -eq [EquationType]::Operator) { 1 } else { 0 }
     do {
       $this.unknownIndex = Get-Random -Minimum 1 -Maximum ($this.size+1)
     } while ($this.unknownIndex % 2 -ne $divUnknown)
+    $eqGetResult = ""
     for ($i = 0; $i -lt $this.tokenList.Count; $i++) {
       $value = if ($this.tokenList[$i] -is [Array]) { $this.tokenList[$i][0].ToString() } else { $this.tokenList[$i] }
+      $eqGetResult += $value
       if ($i -ne $this.unknownIndex) {
         $this.eqStr += $value
       } else {
         $this.eqStr += "_"
       }
     }
+    $this.result = Invoke-Expression $eqGetResult.Replace("x", "*")
     $this.eqStr += "=" + $this.result
     $this.answers += $this.tokenList[$this.unknownIndex][0]
     if ($this.type -eq [EquationType]::Number) {
@@ -183,6 +234,40 @@ class Equation {
     }
   }
 
+  checkAnswer() {
+    if ($this.tokenList[$this.unknownIndex] -is [Array]) {
+      $this.tokenList[$this.unknownIndex][0] = $this.answers[$this.selectedAnswer]
+    } else {
+      $this.tokenList[$this.unknownIndex] = $this.answers[$this.selectedAnswer]
+    }
+    $equationStr = ""
+    for ($i = 0; $i -lt $this.tokenList.Count; $i++) {
+      $token = if ($this.tokenList[$i][0] -eq "x") { "*" } else { $this.tokenList[$i][0] }
+      if ($token -is [int] -and $token -lt 0) {
+        $token = "($token)"
+      }
+      $equationStr += $token.ToString()
+    }
+    try {
+      [int]$userResult = Invoke-Expression $equationStr      
+    } catch {
+      # To avoid division by zero error
+      [int]$userResult = -1
+    }
+    $equationStr = $equationStr.Replace("*", "x")
+    if ($userResult -eq $this.result) {
+      $this.state = [EquationState]::Correct
+      $this.eqStr = $equationStr + "=$userResult"
+      $this.correctAnswers++
+      #$this.eqColor = New-Color 0 255 0 255
+    } else {
+      $this.state = [EquationState]::Incorrect
+      $this.eqStr = $equationStr + "NOT=" + $this.result.ToString()
+      #$this.eqColor = New-Color 255 0 0 255
+    }
+    $this.resetTimer = 3.0
+  }
+
   drawAnswers() {
     for ($i = 0; $i -lt $this.answersPosition.Count; $i++) {
       $rect = $this.answersPosition[$i]
@@ -192,6 +277,13 @@ class Equation {
   }
 
   draw() {
-    [Raylib]::DrawText($this.eqStr, 450, 40, 80, $this.eqColor)
+    [Raylib]::DrawText("Remember: PEMDAS", 950, 40, 30, $this.eqColor)
+    [Raylib]::DrawText("Correct answers: " + $this.correctAnswers.ToString(), 950, 70, 30, $this.eqColor)
+    [Raylib]::DrawText($this.eqStr, 250, 40, 80, $this.eqColor)
+    if ($this.state -eq [EquationState]::Correct) {
+      [Raylib]::DrawText("Correct!", 10, 40, 40, $this.correctColor)  
+    } elseif ($this.state -eq [EquationState]::Incorrect) {
+      [Raylib]::DrawText("Incorrect!", 10, 40, 40, $this.incorrectColor)
+    }
   }
 }
